@@ -1,0 +1,10 @@
+{
+  "additionalFiles": "..\\..\\..,..\\..\\..,..\\..,..\\..,..\\..",
+  "builtInToolsFolders": "",
+  "compiler.optimization_flags": "",
+  "customBuildProperties": "build.warn_data_percentage=75",
+  "fqbn": "arduino:avr:nano:cpu=atmega328",
+  "hardwareFolders": "C:\\Users\\Nhill\\AppData\\Local\\Arduino15\\packages",
+  "otherLibrariesFolders": "C:\\Users\\Nhill\\Documents\\Arduino\\libraries",
+  "sketchLocation": "C:\\Users\\Nhill\\OneDrive\\Documents\\College_Stuff\\Capstone\\ArduinoOBD-master\\nanotimer"
+}

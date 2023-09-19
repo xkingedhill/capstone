@@ -1,0 +1,8 @@
+#line 1 "C:\\Users\\Nhill\\OneDrive\\Documents\\College_Stuff\\Capstone\\ArduinoOBD-master\\nanotimer\\.vscode\\arduino.json"
+{
+    "configuration": "cpu=atmega328",
+    "board": "arduino:avr:nano",
+    "port": "COM4",
+    "sketch": "nanotimer.ino",
+    "output": "../ArduinoOutput"
+}
