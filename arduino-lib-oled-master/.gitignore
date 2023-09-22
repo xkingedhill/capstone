@@ -1,9 +1,0 @@
-*Doxyfile*
-html/
-help/
-bin/
-obj/
-*.sh
-*.cmd
-*.html
-TODO
