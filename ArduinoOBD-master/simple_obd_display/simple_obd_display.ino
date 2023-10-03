@@ -62,7 +62,7 @@ void initScreen()
   lcd.clear();
   lcd.setFontSize(FONT_SIZE_SMALL);
   lcd.setCursor(24, 3);
-  lcd.print("km/h");
+  lcd.print("mph");
   lcd.setCursor(110, 3);
   lcd.print("rpm");
   lcd.setCursor(0, 7);
@@ -78,6 +78,7 @@ void setup()
   lcd.println("OBD DISPLAY");
 
   delay(500);
+  obd.dataMode = 1;
   obd.begin();
 
   lcd.println();

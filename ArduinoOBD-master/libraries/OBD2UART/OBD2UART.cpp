@@ -174,8 +174,10 @@ int COBD::normalizeData(byte pid, char* data)
 	case PID_TIMING_ADVANCE:
 		result = (int)(getSmallValue(data) / 2) - 64;
 		break;
-	case PID_DISTANCE: // km
-	case PID_DISTANCE_WITH_MIL: // km
+	case PID_DISTANCE: // km converted to mi
+	case PID_DISTANCE_WITH_MIL: // km converted to mi
+		result = getLargeValue(data) * 0.62137;
+		return result;
 	case PID_TIME_WITH_MIL: // minute
 	case PID_TIME_SINCE_CODES_CLEARED: // minute
 	case PID_RUNTIME: // second
@@ -523,7 +525,7 @@ uint8_t COBD::getSmallValue(char* data)
 
 int16_t COBD::getTemperatureValue(char* data)
 {
-  return (int)hex2uint8(data) - 40;
+  return ((((int)hex2uint8(data) - 40) * 1.8) + 32); // converted to F
 }
 
 bool COBD::memsInit(bool fusion)
