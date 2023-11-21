@@ -171,13 +171,16 @@ int COBD::normalizeData(byte pid, char* data)
 	case PID_MAF_FLOW: // grams/sec
 		result = getLargeValue(data) / 100;
 		break;
+	case PID_SPEED: // converted to mph
+		result = (int)getSmallValue(data) / 0.621;
+		break;
 	case PID_TIMING_ADVANCE:
 		result = (int)(getSmallValue(data) / 2) - 64;
 		break;
 	case PID_DISTANCE: // km converted to mi
 	case PID_DISTANCE_WITH_MIL: // km converted to mi
 		result = getLargeValue(data) * 0.62137;
-		return result;
+		break;
 	case PID_TIME_WITH_MIL: // minute
 	case PID_TIME_SINCE_CODES_CLEARED: // minute
 	case PID_RUNTIME: // second
