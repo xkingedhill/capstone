@@ -9,63 +9,86 @@
 #define OLED_ADDRESS 0x3C
 
 Adafruit_SH1106G display = Adafruit_SH1106G(128, 64, &Wire, -1);
+COBD obd;
+
 long mood;
 int faceValue;
-int prevFaceValue = 0;
+int prevFaceValue;
 
 unsigned long currentTime;
 unsigned long startTime = millis();
 long blinkInterval = 6000;
 
+static byte pids[]= {PID_RPM, PID_SPEED, PID_DISTANCE, PID_FUEL_LEVEL};
+static byte index = 0;
+byte pid = pids[index];
+int value;
+
+void reconnect() {
+  display.clear();
+  display.setTextSize(2);
+  display.print("Reconnecting");
+  for (uint16_t i = 0; !obd.init(); i++) {
+    if (i == 5) {
+      display.clearDisplay();
+    }
+    delay(3000);
+  }
+}
+
 void setup(){
     display.begin(OLED_ADDRESS, true);
     display.clearDisplay();
     drawOpenEyes();
-    //drawEyebags();
+    drawNeutralMouth();
     display.display();
 }
 
 void loop(){
 
-    currentTime = millis();
-
-    mood = random(10);
-
-    if (currentTime - startTime > blinkInterval) {
-        blink();
-        startTime = currentTime;
-        blinkInterval = random(2000, 12000);
-    }
-
-    if (mood > 5) {
-        clearMouth();
-        drawHappyMouth();
-        faceValue = 4;
-
-    }
-    else if (mood == 5) {
-        clearMouth();
-        drawNeutralMouth();
-        faceValue = 3;
-    }
-    else if (mood == 4 || mood == 3) {
-        clearMouth();
-        drawUnhappyMouth();
-        faceValue = 2;
-    }
-    else if (mood < 3) {
-        clearMouth();
-        drawSadMouth();
-        faceValue = 1;
-    }
-
-    if (faceValue != prevFaceValue) {
-        display.display();
-        prevFaceValue = faceValue;
-    }
+    //starting at neutral face
     
 
-    delay(3000);
+    if (obd.readPID(pid, value)) {
+        eventHandler(pid, value);
+    }
+    index = (index + 1) % sizeof(pids);
+
+    // determine face and draw
+
+    if (obd.errors >= 2) {
+        reconnect();
+        setup();
+    }
+    
+    display.display();
+}
+
+void eventHandler(byte pid, int value){
+    switch(pid){
+        case PID_RPM:
+    /* check for high RPM
+        if value > 4,000rpm
+            mood--
+            wait for cooldown until next event
+    */
+            break;
+        case PID_SPEED:
+        /* 
+        */
+            break;
+        case PID_DISTANCE:
+        /* check for distance
+            if  value - startOdo > 5mi
+            mood++
+            startOdo = value
+        */            
+            break;
+        
+        //fuel level above 90%?
+        case PID_FUEL_LEVEL:
+            break;
+    }
 }
 
 void drawEyebags() {
@@ -117,26 +140,26 @@ void drawClosedEyes() {
 
 void clearEyes() {
     display.fillRect(20, 14, 104, 23, SH110X_BLACK);
+    display.display();
 }
 
 void clearEyebags() {
     display.fillRect(18, 38, 100, 5, SH110X_BLACK);
+    display.display();
 }
 
 void clearMouth() {
     display.fillRect(0, 43, 120, 25, SH110X_BLACK);
+    display.display();
 }
 
 void blink() {
     clearEyes();
-    display.display();
     drawClosedEyes();
     display.display();
     delay(30);
     clearEyes();
-    display.display();
     drawOpenEyes();
-    display.display();
 }
 
 void drawShockedFace() {

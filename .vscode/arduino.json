@@ -1,0 +1,7 @@
+{
+    "configuration": "cpu=atmega328",
+    "board": "arduino:avr:nano",
+    "sketch": "testing_faces\\testing_faces.ino",
+    "port": "COM4",
+    "output": "C:/Users/Nhill/OneDrive/Documents/College_Stuff/capstone extras/ArduinoOutput"
+}
