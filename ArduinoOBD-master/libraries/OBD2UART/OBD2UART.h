@@ -5,6 +5,9 @@
 * (C)2012-2021 Stanley Huang <stanley@freematics.com.au>
 *************************************************************************/
 
+#ifndef _OBD2UART_H_
+#define _OBD2UART_H_
+
 #include <Arduino.h>
 
 #define OBD_TIMEOUT_SHORT 1000 /* ms */

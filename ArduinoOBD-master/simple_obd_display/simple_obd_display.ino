@@ -7,7 +7,7 @@
 *************************************************************************/
 
 #include <Wire.h>
-#include <OBD2UART.h>
+#include <OBD.h>
 #include <MicroLCD.h>
 
 LCD_SH1106 lcd;

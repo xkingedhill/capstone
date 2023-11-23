@@ -4,6 +4,7 @@
 #include <MicroLCD.h>
 
 LCD_SH1106 lcd;
+
 COBD obd; 
 
 void reconnect()
@@ -43,8 +44,9 @@ void loop()
   int value;
   // send a query to OBD adapter for specified OBD-II pid
   if (obd.readPID(pid, value)) {
-      showData(pid, value); // implement this my own way
+    
   }
+
   index = (index + 1) % sizeof(pids);
 
   if (obd.errors >= 2) {
