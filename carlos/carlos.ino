@@ -3,7 +3,6 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SH110X.h>
 #include <OBD.h>
-//#include "OBD2UART.h"
 
 //Make Sure Address is Correct
 #define OLED_ADDRESS 0x3C
@@ -11,51 +10,29 @@
 Adafruit_SH1106G display = Adafruit_SH1106G(128, 64, &Wire, -1);
 COBD obd;
 
-long mood;
-int faceValue;
-int prevFaceValue;
+static byte pids[]= {PID_RPM, PID_SPEED, PID_DISTANCE, PID_FUEL_LEVEL};
+static byte index = 0;
+byte pid = pids[index];
+int value;
 
-unsigned long currentTime;
-unsigned long startTime = millis();
-long blinkInterval = 6000;
+// Current mood value
+int mood = 5;
 
-void eventHandler(byte pid, int value){
-    switch(pid){
-        case PID_RPM:
-            display.setCursor(32, 16);
-            if (value > 4000) {
-                display.print("High rpm!");
-            }
-            else {
-                display.print("Low rpm.");
-            }
-            /* check for high RPM
-                if value > 4,000rpm
-                    mood--
-                    wait for cooldown until next event
-            */
-            break;
-        
-        case PID_SPEED:
-            break;
-        /*
-            //check for speeding
-            
-            break;
-        case PID_DISTANCE:
-        check for distance
-            if  value - startOdo > 5mi
-            mood++
-            startOdo = value
-                   
-            break;
-        
-        //fuel level above 90%?
-        case PID_FUEL_LEVEL:
-            break;
-        */
-    }
-}
+// Sad = 0
+// Unhappy = 1
+// Neutral = 2
+// Happy = 3
+int startFace, currentFace = 2;
+
+// Causes penalty when reaching this RPM
+int rpmLimit = 2000;
+
+unsigned long startTime, currentTime, lastRpmTime, lastSpeedingTime;
+
+const unsigned long blinkCooldown = 6000; // 6s
+const unsigned long rpmCooldown, speedingCooldown = 30000; // 30s
+
+/*** DRAWING FUNCTIONS ***/
 
 void drawEyebags() {
     display.drawCircle(30, 30, 12, SH110X_WHITE);
@@ -134,7 +111,75 @@ void drawShockedFace() {
     display.display();
 }
 
+/*** END OF DRAWING FUNCTIONS ***/
+
+void decrementMood() {
+    mood--;
+    if (mood < 0) {
+        mood = 0;
+    }
+}
+
+void incrementMood() {
+    mood++;
+    if (mood > 10) {
+        mood = 10;
+    }
+}
+
+void eventHandler(byte pid, int value){
+    switch(pid){
+        case PID_RPM:
+            if (((unsigned int)value % 10000) > rpmLimit
+                && currentTime - lastRpmTime >= rpmCooldown) {
+                decrementMood();
+                lastRpmTime = currentTime;
+            }
+            break;
+        
+        case PID_SPEED:
+            break;
+        /*
+            //check for speeding
+            
+            break;
+        case PID_DISTANCE:
+        check for distance
+            if  value - startOdo > 5mi
+            mood++
+            startOdo = value
+                   
+            break;
+        
+        //fuel level above 90%?
+        case PID_FUEL_LEVEL:
+            break;
+        */
+    }
+}
+
+void reconnect() {
+    display.clearDisplay();
+    display.setTextSize(1);
+    display.setCursor(0, 0);
+    display.print("Reconnecting");
+    for (uint16_t i = 0; !obd.init(); i++) {
+    if (i == 5) {
+        display.clearDisplay();
+    }
+    delay(3000);
+    }
+}
+
 void setup(){
+
+    pinMode(LED_BUILTIN, OUTPUT);
+
+    obd.dataMode = 1;
+    obd.begin();
+    while (!obd.init());
+    digitalWrite(LED_BUILTIN, HIGH); // connection established
+
     display.begin(OLED_ADDRESS, true);
     display.clearDisplay();
     display.setCursor(0, 0);
@@ -142,42 +187,31 @@ void setup(){
     display.setTextSize(2);
     display.print("CAR-LOS");
     display.display();
+    delay(1000);
+    display.setCursor(0,32);
+    display.setTextSize(1);
+    display.println("Connected!");
+    display.println("Starting CAR-LOS...");
+    display.display();
 
-    delay(500);
-    obd.dataMode = 1;
-    obd.begin();
+    delay(750);
 
-    /*
+    display.clearDisplay();
     drawOpenEyes();
     drawNeutralMouth();
-    */
-
-    display.setCursor(0, 32);
-    display.setTextSize(1);
-    display.print("Waiting for OBD-II connection...");
-    display.display();
-    while (!obd.init());
-    display.clearDisplay();
-    display.setCursor(0,32);
-    display.print("Entered loop()");
     display.display();
     }
 
 void loop(){
     
-    /*static byte pids[]= {PID_RPM, PID_SPEED, PID_DISTANCE, PID_FUEL_LEVEL};
-    static byte index = 0;
-    byte pid = pids[index];
-    int value;
     //starting at neutral face
-    display.clearDisplay();
 
-    if (obd.readPID(pid, value)) {
+    /*if (obd.readPID(pid, value)) {
         eventHandler(pid, value);
     }
     index = (index + 1) % sizeof(pids);
 
     // determine face and draw
-    */
-    //display.display();
+    
+    //display.display();*/
 }

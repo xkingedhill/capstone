@@ -5,7 +5,7 @@
 LCD_SH1106 lcd;
 COBD obd;
 
-static byte pids[]= {PID_RPM, PID_SPEED};
+static byte pids[]= {PID_RPM, PID_SPEED, PID_DISTANCE};
 static byte index = 0;
 byte pid = pids[index];
 int value;
@@ -56,39 +56,27 @@ void eventHandler(byte pid, int value) {
         case PID_RPM:
             lcd.setCursor(64, 0);
             lcd.setFontSize(FONT_SIZE_XLARGE);
-            lcd.printInt((unsigned int)value % 10000, 4);
-            lcd.setFontSize(FONT_SIZE_SMALL);
-            lcd.setCursor(32, 40);
+            lcd.printInt((unsigned int)value, 4);
             if (((unsigned int)value % 10000) > 2000 && currentTime - startTime >= rpmInterval) {
                 decrementMood();
                 startTime = currentTime;
-
             }
-            /* check for high RPM
-                if value > 4,000rpm
-                    mood--
-                    wait for cooldown until next event
-            */
             break;
         
-        case PID_SPEED:
-            break;
-        /*    
-            //check for speeding
-            
-            break;
         case PID_DISTANCE:
-        check for distance
-            if  value - startOdo > 5mi
-            mood++
-            startOdo = value
-                   
+            lcd.setCursor(64, 5);
+            lcd.setFontSize(FONT_SIZE_XLARGE);
+            lcd.printInt((unsigned int)value, 5);
+            break;
+
+        case PID_SPEED:
+            //check for speeding
             break;
         
         //fuel level above 90%?
+        //only offer this point once
         case PID_FUEL_LEVEL:
             break;
-        */
     }
 }
 
@@ -99,6 +87,7 @@ void initScreen(){
     lcd.print("Mood");
     lcd.setCursor(110, 3);
     lcd.print("rpm");
+    // ADD DISTANCE
 }
 
 void setup() {
@@ -130,7 +119,7 @@ void loop() {
     index = (index + 1) % sizeof(pids);
 
     //print value of mood and elapsed time (for debugging)
-    lcd.setCursor(12, 5);
+    lcd.setCursor(18, 5);
     lcd.setFontSize(FONT_SIZE_XLARGE);
     lcd.printInt(mood, 2);
 

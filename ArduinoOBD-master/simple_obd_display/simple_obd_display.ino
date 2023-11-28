@@ -47,12 +47,10 @@ void showData(byte pid, int value)
     lcd.setFontSize(FONT_SIZE_SMALL);
     lcd.print(" %");
     break;
-  case PID_ENGINE_LOAD:
+  case PID_DISTANCE:
     lcd.setCursor(12, 5);
     lcd.setFontSize(FONT_SIZE_MEDIUM);
-    lcd.printInt(value, 3);
-    lcd.setFontSize(FONT_SIZE_SMALL);
-    lcd.print(" %");
+    lcd.printInt((unsigned int)value, 6);
     break;
   }
 }
@@ -66,7 +64,7 @@ void initScreen()
   lcd.setCursor(110, 3);
   lcd.print("rpm");
   lcd.setCursor(0, 7);
-  lcd.print("ENGINE LOAD");
+  lcd.print("DISTANCE");
   lcd.setCursor(80, 7);
   lcd.print("THROTTLE");
 }
@@ -89,7 +87,7 @@ void setup()
 
 void loop()
 {
-  static byte pids[]= {PID_RPM, PID_SPEED, PID_ENGINE_LOAD, PID_THROTTLE};
+  static byte pids[]= {PID_RPM, PID_SPEED, PID_DISTANCE, PID_THROTTLE};
   static byte index = 0;
   byte pid = pids[index];
   int value;
