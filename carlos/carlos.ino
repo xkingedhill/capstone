@@ -27,6 +27,8 @@ int startFace, currentFace = 2;
 // Causes penalty when reaching this RPM
 int rpmLimit = 2000;
 
+unsigned int startDistance, currentDistance;
+
 unsigned long startTime, currentTime, lastRpmTime, lastSpeedingTime;
 
 const unsigned long blinkCooldown = 6000; // 6s
@@ -200,13 +202,20 @@ void setup(){
     drawOpenEyes();
     drawNeutralMouth();
     display.display();
+
+    startTime, lastRpmTime, lastSpeedingTime = millis();
+    obd.readPID(PID_DISTANCE, startDistance);
     }
 
 void loop(){
     
     //starting at neutral face
 
-    /*if (obd.readPID(pid, value)) {
+    /*
+
+    currentTime = millis();
+    
+    if (obd.readPID(pid, value)) {
         eventHandler(pid, value);
     }
     index = (index + 1) % sizeof(pids);

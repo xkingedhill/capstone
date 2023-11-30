@@ -14,7 +14,7 @@ int faceValue;
 int prevFaceValue = 0;
 
 unsigned long currentTime;
-unsigned long startTime = millis();
+unsigned long lastLoopTime, lastBlinkTime;
 long blinkInterval = 6000;
 
 void setup(){
@@ -23,49 +23,51 @@ void setup(){
     drawOpenEyes();
     //drawEyebags();
     display.display();
+    lastLoopTime = lastBlinkTime = millis()
 }
 
 void loop(){
 
     currentTime = millis();
 
-    mood = random(10);
+    while (currentTime - lastLoopTime >= 3000) {
+        
+        mood = random(10);
 
-    if (currentTime - startTime > blinkInterval) {
-        blink();
-        startTime = currentTime;
-        blinkInterval = random(2000, 12000);
-    }
+        if (currentTime - lastBlinkTime >= blinkInterval) {
+            blink();
+            lastBlinkTime = currentTime;
+            blinkInterval = random(2000, 12000);
+        }
 
-    if (mood > 5) {
-        clearMouth();
-        drawHappyMouth();
-        faceValue = 4;
+        if (mood > 5) {
+            clearMouth();
+            drawHappyMouth();
+            faceValue = 4;
 
-    }
-    else if (mood == 5) {
-        clearMouth();
-        drawNeutralMouth();
-        faceValue = 3;
-    }
-    else if (mood == 4 || mood == 3) {
-        clearMouth();
-        drawUnhappyMouth();
-        faceValue = 2;
-    }
-    else if (mood < 3) {
-        clearMouth();
-        drawSadMouth();
-        faceValue = 1;
-    }
+        }
+        else if (mood == 5) {
+            clearMouth();
+            drawNeutralMouth();
+            faceValue = 3;
+        }
+        else if (mood == 4 || mood == 3) {
+            clearMouth();
+            drawUnhappyMouth();
+            faceValue = 2;
+        }
+        else if (mood < 3) {
+            clearMouth();
+            drawSadMouth();
+            faceValue = 1;
+        }
 
-    if (faceValue != prevFaceValue) {
-        display.display();
-        prevFaceValue = faceValue;
+        if (faceValue != prevFaceValue) {
+            display.display();
+            prevFaceValue = faceValue;
+        }
+        lastLoopTime = millis();
     }
-    
-
-    delay(3000);
 }
 
 void drawEyebags() {

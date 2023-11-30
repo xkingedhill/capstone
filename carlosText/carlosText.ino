@@ -21,9 +21,16 @@ int mood = 5;
 int faceValue = 3;
 
 
-unsigned long currentTime;
-unsigned long startTime;
-unsigned long rpmInterval = 30000; // 30s
+// Causes penalty when reaching this RPM
+int rpmLimit = 3500;
+
+int startDistance;
+
+unsigned long startTime, currentTime, lastRpmTime, lastSpeedingTime;
+
+const unsigned long blinkCooldown = 6000; // 6s
+const unsigned long rpmCooldown = 30000, speedingCooldown = 30000; // 30s
+
 
 void reconnect() {
     lcd.clear();
@@ -53,30 +60,34 @@ void incrementMood() {
 
 void eventHandler(byte pid, int value) {
     switch(pid){
-        case PID_RPM:
-            lcd.setCursor(64, 0);
-            lcd.setFontSize(FONT_SIZE_XLARGE);
-            lcd.printInt((unsigned int)value, 4);
-            if (((unsigned int)value % 10000) > 2000 && currentTime - startTime >= rpmInterval) {
-                decrementMood();
-                startTime = currentTime;
-            }
-            break;
-        
-        case PID_DISTANCE:
-            lcd.setCursor(64, 5);
-            lcd.setFontSize(FONT_SIZE_XLARGE);
-            lcd.printInt((unsigned int)value, 5);
-            break;
+    case PID_RPM:
+        lcd.setCursor(64, 0);
+        lcd.setFontSize(FONT_SIZE_XLARGE);
+        lcd.printInt((unsigned int)value, 4);
+        if ((value % 10000) > rpmLimit && currentTime - lastRpmTime >= rpmCooldown) {
+            decrementMood();
+            lastRpmTime = currentTime;
+        }
+        break;
+    
+    case PID_DISTANCE:
+        lcd.setCursor(80, 5);
+        lcd.setFontSize(FONT_SIZE_MEDIUM);
+        lcd.printInt((unsigned int)value, 6);
+        if (value - startDistance > 2) {
+            incrementMood();
+            startDistance = value;
+        }
+        break;
 
-        case PID_SPEED:
-            //check for speeding
-            break;
-        
-        //fuel level above 90%?
-        //only offer this point once
-        case PID_FUEL_LEVEL:
-            break;
+    case PID_SPEED:
+        //check for speeding
+        break;
+    
+    //fuel level above 90%?
+    //only offer this point once
+    case PID_FUEL_LEVEL:
+        break;
     }
 }
 
@@ -87,12 +98,11 @@ void initScreen(){
     lcd.print("Mood");
     lcd.setCursor(110, 3);
     lcd.print("rpm");
-    // ADD DISTANCE
+    lcd.setCursor(80, 7);
+    lcd.print("Distance");
 }
 
 void setup() {
-
-    startTime = millis();
 
     lcd.begin();
     lcd.setFontSize(FONT_SIZE_MEDIUM);
@@ -107,6 +117,9 @@ void setup() {
     lcd.println("Connecting...");
     while (!obd.init());
     initScreen();
+
+    startTime, lastRpmTime, lastSpeedingTime = millis();
+    obd.readPID(PID_DISTANCE, startDistance);
 }
 
 void loop() {
@@ -117,9 +130,10 @@ void loop() {
         eventHandler(pid, value);
     }
     index = (index + 1) % sizeof(pids);
+    pid = pids[index];
 
     //print value of mood and elapsed time (for debugging)
-    lcd.setCursor(18, 5);
+    lcd.setCursor(25, 5);
     lcd.setFontSize(FONT_SIZE_XLARGE);
     lcd.printInt(mood, 2);
 
@@ -130,4 +144,5 @@ void loop() {
         reconnect();
         setup();
     }
+
 }

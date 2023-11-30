@@ -180,9 +180,9 @@ int COBD::normalizeData(byte pid, char* data)
 	case PID_MAF_FLOW: // grams/sec
 		result = getLargeValue(data) / 100;
 		break;
-	case PID_SPEED:
+	case PID_SPEED: // km/h converted to mph
 		result = (float)getSmallValue(data) / 0.621;
-		break
+		break;
 	case PID_TIMING_ADVANCE:
 		result = (int)(getSmallValue(data) / 2) - 64;
 		break;
