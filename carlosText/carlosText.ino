@@ -23,15 +23,16 @@ int faceValue = 3;
 
 // Causes penalty when reaching this RPM
 int rpmLimit = 3500;
+int speedLimit = 30;
 
-int startDistance;
+int startDistance, lastSpeed;
 
-unsigned long startTime, currentTime, lastRpmTime, lastSpeedingTime;
+unsigned long startTime, currentTime, lastRpmTime, lastSpeedingTime, lastBrakeTime, lastSecond;
+
+bool fuelBonusGiven, fuelPenaltyGiven;
 
 const unsigned long blinkCooldown = 6000; // 6s
-const unsigned long rpmCooldown = 30000, speedingCooldown = 30000; // 30s
-
-
+const unsigned long penaltyCooldown = 30000; // 30s
 void reconnect() {
     lcd.clear();
     lcd.setFontSize(FONT_SIZE_MEDIUM);
@@ -64,7 +65,7 @@ void eventHandler(byte pid, int value) {
         lcd.setCursor(64, 0);
         lcd.setFontSize(FONT_SIZE_XLARGE);
         lcd.printInt((unsigned int)value, 4);
-        if ((value % 10000) > rpmLimit && currentTime - lastRpmTime >= rpmCooldown) {
+        if ((value % 10000) > rpmLimit && currentTime - lastRpmTime >= penaltyCooldown) {
             decrementMood();
             lastRpmTime = currentTime;
         }
@@ -74,25 +75,54 @@ void eventHandler(byte pid, int value) {
         lcd.setCursor(80, 5);
         lcd.setFontSize(FONT_SIZE_MEDIUM);
         lcd.printInt((unsigned int)value, 6);
-        if (value - startDistance > 2) {
+        if (value - startDistance >= 2) {
             incrementMood();
             startDistance = value;
         }
         break;
 
     case PID_SPEED:
+        lcd.setCursor(0, 0);
+        lcd.setFontSize(FONT_SIZE_XLARGE);
+        lcd.printInt((unsigned int)value % 1000, 3);
         //check for speeding
+        if (value > speedLimit && currentTime - lastSpeedingTime >= penaltyCooldown) {
+            decrementMood();
+            lastSpeedingTime = currentTime;
+        }
+        //check for braking
+        if (currentTime - lastSecond >= 1000) { // a second has passed
+            if (value - lastSpeed <= -9 && currentTime - lastBrakeTime >= penaltyCooldown) {
+                decrementMood;
+                lastBrakeTime = currentTime;
+            }
+            lastSecond = currentTime;
+        }
+        lastSpeed = value;
         break;
     
-    //fuel level above 90%?
-    //only offer this point once
     case PID_FUEL_LEVEL:
+        //fuel level above 90%?
+        //only offer this point once
+        if (value >= 50 && !fuelBonusGiven) {
+            incrementMood();
+            fuelBonusGiven = true;
+        }
+        //fuel level below 15%?
+        //only decrease once
+        if (value <= 25 && !fuelPenaltyGiven) {
+            decrementMood();
+            fuelPenaltyGiven = true;
+        }
         break;
     }
 }
 
 void initScreen(){
     lcd.clear();
+    lcd.setFontSize(FONT_SIZE_SMALL);
+    lcd.setCursor(24, 3);
+    lcd.print("mph");
     lcd.setFontSize(FONT_SIZE_SMALL);
     lcd.setCursor(0, 7);
     lcd.print("Mood");
@@ -118,8 +148,9 @@ void setup() {
     while (!obd.init());
     initScreen();
 
-    startTime, lastRpmTime, lastSpeedingTime = millis();
+    startTime = lastRpmTime = lastSpeedingTime = lastSecond = millis();
     obd.readPID(PID_DISTANCE, startDistance);
+    fuelBonusGiven = fuelPenaltyGiven = false;
 }
 
 void loop() {
