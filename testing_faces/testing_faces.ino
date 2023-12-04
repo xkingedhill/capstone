@@ -2,13 +2,15 @@
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SH110X.h>
-#include <OBD2UART.h>
+#include <OBD.h>
 
 
 //Make Sure Address is Correct
 #define OLED_ADDRESS 0x3C
 
 Adafruit_SH1106G display = Adafruit_SH1106G(128, 64, &Wire, -1);
+COBD obd;
+
 long mood;
 int faceValue;
 int prevFaceValue = 0;
@@ -18,19 +20,22 @@ unsigned long lastLoopTime, lastBlinkTime;
 long blinkInterval = 6000;
 
 void setup(){
+
     display.begin(OLED_ADDRESS, true);
     display.clearDisplay();
     drawOpenEyes();
     //drawEyebags();
     display.display();
-    lastLoopTime = lastBlinkTime = millis()
+    lastLoopTime = lastBlinkTime = millis();
+
+    obd.begin();
 }
 
 void loop(){
 
     currentTime = millis();
 
-    while (currentTime - lastLoopTime >= 3000) {
+    if (currentTime - lastLoopTime >= 3000) {
         
         mood = random(10);
 
@@ -66,7 +71,7 @@ void loop(){
             display.display();
             prevFaceValue = faceValue;
         }
-        lastLoopTime = millis();
+        lastLoopTime = currentTime;
     }
 }
 

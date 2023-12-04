@@ -10,29 +10,11 @@
 Adafruit_SH1106G display = Adafruit_SH1106G(128, 64, &Wire, -1);
 COBD obd;
 
-static byte pids[]= {PID_RPM, PID_SPEED, PID_DISTANCE, PID_FUEL_LEVEL};
-static byte index = 0;
-byte pid = pids[index];
-int value;
+int startDistance, currentDistance, lastDistance, lastSpeed;
 
-// Current mood value
-int mood = 5;
+unsigned long currentTime;
 
-// Sad = 0
-// Unhappy = 1
-// Neutral = 2
-// Happy = 3
-int startFace, currentFace = 2;
-
-// Causes penalty when reaching this RPM
-int rpmLimit = 2000;
-
-unsigned int startDistance, currentDistance;
-
-unsigned long startTime, currentTime, lastRpmTime, lastSpeedingTime;
-
-const unsigned long blinkCooldown = 6000; // 6s
-const unsigned long rpmCooldown, speedingCooldown = 30000; // 30s
+unsigned int blinkInterval = 6000; // 6s
 
 /*** DRAWING FUNCTIONS ***/
 
@@ -85,26 +67,26 @@ void drawClosedEyes() {
 
 void clearEyes() {
     display.fillRect(20, 14, 104, 23, SH110X_BLACK);
-    display.display();
 }
 
 void clearEyebags() {
     display.fillRect(18, 38, 100, 5, SH110X_BLACK);
-    display.display();
 }
 
 void clearMouth() {
     display.fillRect(0, 43, 120, 25, SH110X_BLACK);
-    display.display();
 }
 
 void blink() {
     clearEyes();
+    display.display();
     drawClosedEyes();
     display.display();
     delay(30);
     clearEyes();
+    display.display();
     drawOpenEyes();
+    display.display();
 }
 
 void drawShockedFace() {
@@ -115,112 +97,193 @@ void drawShockedFace() {
 
 /*** END OF DRAWING FUNCTIONS ***/
 
-void decrementMood() {
+void decrementMood(int mood) {
     mood--;
     if (mood < 0) {
         mood = 0;
     }
 }
 
-void incrementMood() {
+void incrementMood(int mood) {
     mood++;
     if (mood > 10) {
         mood = 10;
     }
 }
 
-void eventHandler(byte pid, int value){
+void eventHandler(byte pid, int value, int mood){
+
+    static const int RPM_LIMIT = 3500;
+    static const int SPEED_LIMIT = 30;
+    static const unsigned int PENALTY_COOLDOWN = 30000; // 30s
+
+    static unsigned long lastRpmTime, lastSpeedingTime, lastBrakeTime, lastSecond;
+
+
     switch(pid){
         case PID_RPM:
-            if (((unsigned int)value % 10000) > rpmLimit
-                && currentTime - lastRpmTime >= rpmCooldown) {
-                decrementMood();
+            if ((value % 10000) > RPM_LIMIT && currentTime - lastRpmTime >= PENALTY_COOLDOWN) {
+                decrementMood(mood);
                 lastRpmTime = currentTime;
             }
             break;
         
-        case PID_SPEED:
-            break;
-        /*
-            //check for speeding
-            
-            break;
         case PID_DISTANCE:
-        check for distance
-            if  value - startOdo > 5mi
-            mood++
-            startOdo = value
-                   
+            currentDistance = value;
+
+            if (currentDistance - lastDistance >= 1) { 
+                incrementMood(mood);
+                lastDistance = currentDistance;
+            }
             break;
         
-        //fuel level above 90%?
-        case PID_FUEL_LEVEL:
+        case PID_SPEED:
+            if (value > SPEED_LIMIT && currentTime - lastSpeedingTime >= PENALTY_COOLDOWN) {
+                decrementMood(mood);
+                lastSpeedingTime = currentTime;
+            }
+
+            if (currentTime - lastSecond >= 1000) {
+                if (value - lastSpeed <= -9 && currentTime - lastBrakeTime >= PENALTY_COOLDOWN) {
+                    decrementMood(mood);
+                    lastBrakeTime = currentTime;
+                }
+                lastSecond = currentTime;
+                lastSpeed = value;
+            }
             break;
-        */
     }
 }
 
-void reconnect() {
+void resultsScreen(int currentFaceValue) {
     display.clearDisplay();
+    display.display();
+    display.setTextColor(SH110X_WHITE);
+    delay(500);
+    display.setCursor(0,0);
     display.setTextSize(1);
-    display.setCursor(0, 0);
-    display.print("Reconnecting");
-    for (uint16_t i = 0; !obd.init(); i++) {
-    if (i == 5) {
-        display.clearDisplay();
+    display.println(F("Drive complete!"));
+    display.display();
+    delay(2000);
+    display.println();
+    display.print(F("Final mood: "));
+    display.display();
+    delay(1750);
+    switch(currentFaceValue) {
+        case 0:
+            display.print(F("Sad"));
+            break;
+        case 1:
+            display.print(F("Unhappy"));
+            break;
+        case 2:
+            display.print(F("Neutral"));
+            break;
+        case 3: 
+            display.print(F("Happy"));
+            break;
     }
-    delay(3000);
-    }
+    display.display();
+    delay(1000);
+    display.println();
+    display.println();
+    display.println(F("Distance"));
+    display.print(F("travelled: "));
+    display.display();
+    delay(1750);
+    display.print(currentDistance - startDistance);
+    display.print(F("mi"));
+    display.display();
 }
 
 void setup(){
 
     pinMode(LED_BUILTIN, OUTPUT);
 
-    obd.dataMode = 1;
-    obd.begin();
-    while (!obd.init());
-    digitalWrite(LED_BUILTIN, HIGH); // connection established
-
     display.begin(OLED_ADDRESS, true);
     display.clearDisplay();
     display.setCursor(0, 0);
     display.setTextColor(SH110X_WHITE);
-    display.setTextSize(2);
-    display.print("CAR-LOS");
-    display.display();
-    delay(1000);
-    display.setCursor(0,32);
-    display.setTextSize(1);
-    display.println("Connected!");
-    display.println("Starting CAR-LOS...");
+    display.print(F("Connecting..."));
     display.display();
 
-    delay(750);
+    obd.begin();
+    //while (!obd.init());
+    digitalWrite(LED_BUILTIN, HIGH); // obd connected
 
     display.clearDisplay();
     drawOpenEyes();
     drawNeutralMouth();
     display.display();
 
-    startTime, lastRpmTime, lastSpeedingTime = millis();
     obd.readPID(PID_DISTANCE, startDistance);
-    }
+    lastDistance = startDistance;
+}
 
 void loop(){
+
+    static byte pids[]= {PID_RPM, PID_SPEED, PID_DISTANCE};
+    static byte index = 0;
+    byte pid = pids[index];
+    int value;
+
+    static long lastBlinkTime;
     
-    //starting at neutral face
-
-    /*
-
     currentTime = millis();
-    
+
+    // Current mood value
+    static int mood = 5;
+
+    // Sad = 0
+    // Unhappy = 1
+    // Neutral = 2
+    // Happy = 3
+    static int lastFaceValue, currentFaceValue = 2;
+
     if (obd.readPID(pid, value)) {
-        eventHandler(pid, value);
+        eventHandler(pid, value, mood);
     }
     index = (index + 1) % sizeof(pids);
+    pid = pids[index];
+    
+
+    if (currentTime - lastBlinkTime >= blinkInterval) {
+        blink();
+        lastBlinkTime = currentTime;
+        blinkInterval = random(2000, 12000);
+    }
 
     // determine face and draw
+    if (mood > 5) {
+        clearMouth();
+        drawHappyMouth();
+        currentFaceValue = 3;
+    }
+    else if (mood == 5) {
+        clearMouth();
+        drawNeutralMouth();
+        currentFaceValue = 2;
+    }
+    else if (mood == 4 || mood == 3) {
+        clearMouth();
+        drawUnhappyMouth();
+        currentFaceValue = 1;
+    }
+    else if (mood < 3) {
+        clearMouth();
+        drawSadMouth();
+        currentFaceValue = 0;
+    }
+
+    if (currentFaceValue != lastFaceValue) {
+        display.display();
+        lastFaceValue = currentFaceValue;
+    }
     
-    //display.display();*/
+    if (obd.errors >= 2) {
+        //drive has ended
+        digitalWrite(LED_BUILTIN, LOW);
+        resultsScreen(currentFaceValue);
+        exit(1);
+    }
 }
