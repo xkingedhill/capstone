@@ -6,3 +6,5 @@ uses live data from your vehicle to react to events happenining while a user is 
 
 ### Libraries Used
 [Main Arduino-OBD Library by stanleyhuangyc](https://github.com/stanleyhuangyc/ArduinoOBD)
+[Adafruit GFX Library](https://learn.adafruit.com/adafruit-gfx-graphics-library/overview)
+[Adafruit SH110x driver for OLED displays](https://github.com/adafruit/Adafruit_SH110x)
