@@ -208,7 +208,7 @@ void setup(){
     display.display();
 
     obd.begin();
-    //while (!obd.init());
+    while (!obd.init());
     digitalWrite(LED_BUILTIN, HIGH); // obd connected
 
     display.clearDisplay();
