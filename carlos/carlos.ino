@@ -10,9 +10,18 @@
 Adafruit_SH1106G display = Adafruit_SH1106G(128, 64, &Wire, -1);
 COBD obd;
 
+// Current mood value
+int mood = 5;
+
+// Sad = 0
+// Unhappy = 1
+// Neutral = 2
+// Happy = 3
+int lastFaceValue, currentFaceValue = 2;
+
 int startDistance, currentDistance, lastDistance, lastSpeed;
 
-unsigned long currentTime;
+unsigned long currentTime, lastRpmTime, lastSpeedingTime, lastBrakeTime, lastSecond, lastBlinkTime;
 
 unsigned int blinkInterval = 6000; // 6s
 
@@ -97,33 +106,30 @@ void drawShockedFace() {
 
 /*** END OF DRAWING FUNCTIONS ***/
 
-void decrementMood(int mood) {
+void decrementMood() {
     mood--;
     if (mood < 0) {
         mood = 0;
     }
 }
 
-void incrementMood(int mood) {
+void incrementMood() {
     mood++;
     if (mood > 10) {
         mood = 10;
     }
 }
 
-void eventHandler(byte pid, int value, int mood){
+void eventHandler(byte pid, int value){
 
     static const int RPM_LIMIT = 3500;
     static const int SPEED_LIMIT = 30;
     static const unsigned int PENALTY_COOLDOWN = 30000; // 30s
 
-    static unsigned long lastRpmTime, lastSpeedingTime, lastBrakeTime, lastSecond;
-
-
     switch(pid){
         case PID_RPM:
             if ((value % 10000) > RPM_LIMIT && currentTime - lastRpmTime >= PENALTY_COOLDOWN) {
-                decrementMood(mood);
+                decrementMood();
                 lastRpmTime = currentTime;
             }
             break;
@@ -132,20 +138,20 @@ void eventHandler(byte pid, int value, int mood){
             currentDistance = value;
 
             if (currentDistance - lastDistance >= 1) { 
-                incrementMood(mood);
+                incrementMood();
                 lastDistance = currentDistance;
             }
             break;
         
         case PID_SPEED:
             if (value > SPEED_LIMIT && currentTime - lastSpeedingTime >= PENALTY_COOLDOWN) {
-                decrementMood(mood);
+                decrementMood();
                 lastSpeedingTime = currentTime;
             }
 
             if (currentTime - lastSecond >= 1000) {
                 if (value - lastSpeed <= -9 && currentTime - lastBrakeTime >= PENALTY_COOLDOWN) {
-                    decrementMood(mood);
+                    decrementMood();
                     lastBrakeTime = currentTime;
                 }
                 lastSecond = currentTime;
@@ -155,7 +161,7 @@ void eventHandler(byte pid, int value, int mood){
     }
 }
 
-void resultsScreen(int currentFaceValue) {
+void resultsScreen() {
     display.clearDisplay();
     display.display();
     display.setTextColor(SH110X_WHITE);
@@ -166,9 +172,11 @@ void resultsScreen(int currentFaceValue) {
     display.display();
     delay(2000);
     display.println();
-    display.print(F("Final mood: "));
+    display.println(F("Final mood: "));
+    display.println();
     display.display();
     delay(1750);
+    display.setTextSize(2);
     switch(currentFaceValue) {
         case 0:
             display.print(F("Sad"));
@@ -184,16 +192,6 @@ void resultsScreen(int currentFaceValue) {
             break;
     }
     display.display();
-    delay(1000);
-    display.println();
-    display.println();
-    display.println(F("Distance"));
-    display.print(F("travelled: "));
-    display.display();
-    delay(1750);
-    display.print(currentDistance - startDistance);
-    display.print(F("mi"));
-    display.display();
 }
 
 void setup(){
@@ -208,7 +206,7 @@ void setup(){
     display.display();
 
     obd.begin();
-    while (!obd.init());
+    //while (!obd.init());
     digitalWrite(LED_BUILTIN, HIGH); // obd connected
 
     display.clearDisplay();
@@ -216,6 +214,7 @@ void setup(){
     drawNeutralMouth();
     display.display();
 
+    lastRpmTime = lastSpeedingTime = lastSecond = millis();
     obd.readPID(PID_DISTANCE, startDistance);
     lastDistance = startDistance;
 }
@@ -226,22 +225,11 @@ void loop(){
     static byte index = 0;
     byte pid = pids[index];
     int value;
-
-    static long lastBlinkTime;
     
     currentTime = millis();
 
-    // Current mood value
-    static int mood = 5;
-
-    // Sad = 0
-    // Unhappy = 1
-    // Neutral = 2
-    // Happy = 3
-    static int lastFaceValue, currentFaceValue = 2;
-
     if (obd.readPID(pid, value)) {
-        eventHandler(pid, value, mood);
+        eventHandler(pid, value);
     }
     index = (index + 1) % sizeof(pids);
     pid = pids[index];
@@ -283,7 +271,7 @@ void loop(){
     if (obd.errors >= 2) {
         //drive has ended
         digitalWrite(LED_BUILTIN, LOW);
-        resultsScreen(currentFaceValue);
+        resultsScreen();
         exit(1);
     }
 }
