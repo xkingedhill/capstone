@@ -19,20 +19,11 @@ int mood = 5;
 // Happy = 3
 int lastFaceValue, currentFaceValue = 2;
 
-int startDistance, currentDistance, lastDistance, lastSpeed;
+int lastDistance, lastSpeed;
 
-unsigned long currentTime, lastRpmTime, lastSpeedingTime, lastBrakeTime, lastSecond, lastBlinkTime;
-
-unsigned int blinkInterval = 6000; // 6s
+unsigned long currentTime;
 
 /*** DRAWING FUNCTIONS ***/
-
-void drawEyebags() {
-    display.drawCircle(30, 30, 12, SH110X_WHITE);
-    display.drawCircle(98, 30, 12, SH110X_WHITE);
-    display.fillRect(18, 18, 100, 20, SH110X_BLACK);
-    drawOpenEyes();
-}
 
 void drawHappyMouth() {
     display.fillCircle(64, 25, 25, SH110X_WHITE);    // full smile
@@ -54,19 +45,9 @@ void drawSadMouth() {
     display.fillRect(30, 54, 60, 25, SH110X_BLACK);
 }
 
-void drawShockedMouth() {
-    display.fillCircle(64, 60, 10, SH110X_WHITE);
-    display.fillRect(50, 60, 30, 20, SH110X_BLACK);
-}
-
 void drawOpenEyes() {
     display.fillCircle(30, 30, 6, SH110X_WHITE);
     display.fillCircle(98, 30, 6, SH110X_WHITE);
-}
-
-void drawShockedEyes() {
-    display.fillCircle(30, 25, 9, SH110X_WHITE);
-    display.fillCircle(98, 25, 9, SH110X_WHITE);
 }
 
 void drawClosedEyes() {
@@ -76,10 +57,6 @@ void drawClosedEyes() {
 
 void clearEyes() {
     display.fillRect(20, 14, 104, 23, SH110X_BLACK);
-}
-
-void clearEyebags() {
-    display.fillRect(18, 38, 100, 5, SH110X_BLACK);
 }
 
 void clearMouth() {
@@ -95,12 +72,6 @@ void blink() {
     clearEyes();
     display.display();
     drawOpenEyes();
-    display.display();
-}
-
-void drawShockedFace() {
-    drawShockedEyes();
-    drawShockedMouth();
     display.display();
 }
 
@@ -122,9 +93,11 @@ void incrementMood() {
 
 void eventHandler(byte pid, int value){
 
-    static const int RPM_LIMIT = 3500;
-    static const int SPEED_LIMIT = 30;
-    static const unsigned int PENALTY_COOLDOWN = 30000; // 30s
+    const int RPM_LIMIT = 3000;
+    const int SPEED_LIMIT = 50;
+    const int PENALTY_COOLDOWN = 30000; // 30s
+
+    static unsigned long lastRpmTime, lastSpeedingTime, lastBrakeTime, lastSecond;
 
     switch(pid){
         case PID_RPM:
@@ -135,11 +108,9 @@ void eventHandler(byte pid, int value){
             break;
         
         case PID_DISTANCE:
-            currentDistance = value;
-
-            if (currentDistance - lastDistance >= 1) { 
+            if (value - lastDistance >= 1) { 
                 incrementMood();
-                lastDistance = currentDistance;
+                lastDistance = value;
             }
             break;
         
@@ -199,6 +170,8 @@ void setup(){
     pinMode(LED_BUILTIN, OUTPUT);
 
     display.begin(OLED_ADDRESS, true);
+    delay(500);
+
     display.clearDisplay();
     display.setCursor(0, 0);
     display.setTextColor(SH110X_WHITE);
@@ -206,28 +179,34 @@ void setup(){
     display.display();
 
     obd.begin();
-    //while (!obd.init());
+    while (!obd.init());
     digitalWrite(LED_BUILTIN, HIGH); // obd connected
 
+    //start on neutral face
     display.clearDisplay();
     drawOpenEyes();
     drawNeutralMouth();
     display.display();
 
-    lastRpmTime = lastSpeedingTime = lastSecond = millis();
-    obd.readPID(PID_DISTANCE, startDistance);
-    lastDistance = startDistance;
+    //get initial times and distances
+    obd.readPID(PID_DISTANCE, lastDistance);
 }
 
 void loop(){
 
+    //pids to cycle through
     static byte pids[]= {PID_RPM, PID_SPEED, PID_DISTANCE};
     static byte index = 0;
     byte pid = pids[index];
     int value;
+
+    static unsigned long lastBlinkTime;
+    static int blinkInterval = 6000; // 6s
     
+    //get current time
     currentTime = millis();
 
+    //read from vehicle and send to eventHandler
     if (obd.readPID(pid, value)) {
         eventHandler(pid, value);
     }
@@ -263,13 +242,14 @@ void loop(){
         currentFaceValue = 0;
     }
 
+    //if face needs to be updated, do so
     if (currentFaceValue != lastFaceValue) {
         display.display();
         lastFaceValue = currentFaceValue;
     }
     
+    //check if drive has ended
     if (obd.errors >= 2) {
-        //drive has ended
         digitalWrite(LED_BUILTIN, LOW);
         resultsScreen();
         exit(1);
