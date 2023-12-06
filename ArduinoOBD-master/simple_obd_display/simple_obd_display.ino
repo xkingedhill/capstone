@@ -40,7 +40,7 @@ void showData(byte pid, int value)
     lcd.setFontSize(FONT_SIZE_XLARGE);
     lcd.printInt((unsigned int)value % 1000, 3);
     break;
-  case PID_THROTTLE:
+  case PID_FUEL_LEVEL:
     lcd.setCursor(88, 5);
     lcd.setFontSize(FONT_SIZE_MEDIUM);
     lcd.printInt(value % 100, 3);
@@ -87,7 +87,7 @@ void setup()
 
 void loop()
 {
-  static byte pids[]= {PID_RPM, PID_SPEED, PID_DISTANCE, PID_THROTTLE};
+  static byte pids[]= {PID_RPM, PID_SPEED, PID_DISTANCE, PID_FUEL_LEVEL};
   static byte index = 0;
   byte pid = pids[index];
   int value;
